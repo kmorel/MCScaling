@@ -1,0 +1,9 @@
+#ifndef _ThresholdScalingConfig_h
+#define _ThresholdScalingConfig_h
+
+#define NUM_TRIALS @NUM_TRIALS@
+
+#define DATA_FILE "@DATA_FILE@"
+#define GRID_SIZE @GRID_SIZE@
+
+#endif //_ThresholdScalingConfig_h
