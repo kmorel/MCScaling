@@ -1,4 +1,4 @@
-#include <ThresholdScalingConfig.h>
+#include <MCScalingConfig.h>
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -178,7 +178,7 @@ private:
 public:
   static int Run()
   {
-    FILE *fd = fopen("ThresholdScalingDax.csv", "w");
+    FILE *fd = fopen("MCScalingTbb.csv", "w");
     assert(fd != NULL);
     fprintf(fd, "Implementation,Threads,Trial,Seconds\n");
 

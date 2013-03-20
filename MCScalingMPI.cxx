@@ -1,4 +1,4 @@
-#include <ThresholdScalingConfig.h>
+#include <MCScalingConfig.h>
 
 #include <mpi.h>
 
@@ -237,13 +237,13 @@ private:
         const dax::Scalar HIGH_SCALAR = 200.0;
 #endif // LOAD_DATA
     ClassifyResultType classificationArray;
-    dax::cont::Timer<DeviceAdapter> classifyTimer;
+//    dax::cont::Timer<DeviceAdapter> classifyTimer;
     scheduler.Invoke(dax::worklet::ThresholdClassify<dax::Scalar>(
                        LOW_SCALAR, HIGH_SCALAR),
                      grid,
                      inArray,
                      classificationArray);
-    dax::Scalar elapsedClassify = classifyTimer.GetElapsedTime();
+//    dax::Scalar elapsedClassify = classifyTimer.GetElapsedTime();
 
     // Build thresholded topology.
     GenerateTopologyType resolveTopology(classificationArray);
@@ -275,12 +275,12 @@ private:
       }
 
     this->LogTime(comm, "Dax-MPI", trial, time);
-    this->LogTime(comm, "classify", trial, elapsedClassify);
-    this->LogTime(comm, "scan", trial, dax::cont::scheduling::ScanTime);
-    this->LogTime(comm, "fill-index", trial, dax::cont::scheduling::FillIndexTime);
-    this->LogTime(comm, "upper-bounds", trial, dax::cont::scheduling::UpperBoundsTime);
-    this->LogTime(comm, "worklet", trial, dax::cont::scheduling::WorkletTime);
-    // this->LogTime(cont, "remove-duplicate-points", trial, dax::cont::scheduling::RemoveDuplicatePointsTime);
+//    this->LogTime(comm, "classify", trial, elapsedClassify);
+//    this->LogTime(comm, "scan", trial, dax::cont::scheduling::ScanTime);
+//    this->LogTime(comm, "fill-index", trial, dax::cont::scheduling::FillIndexTime);
+//    this->LogTime(comm, "upper-bounds", trial, dax::cont::scheduling::UpperBoundsTime);
+//    this->LogTime(comm, "worklet", trial, dax::cont::scheduling::WorkletTime);
+//    // this->LogTime(cont, "remove-duplicate-points", trial, dax::cont::scheduling::RemoveDuplicatePointsTime);
   }
 
   void TryWithComm(MPI_Comm comm)
@@ -359,7 +359,7 @@ public:
     this->LogFile = NULL;
     if (this->Rank == 0)
       {
-      this->LogFile = fopen("ThresholdScalingMPI.csv", "w");
+      this->LogFile = fopen("MCScalingMPI.csv", "w");
       assert(this->LogFile != NULL);
       fprintf(this->LogFile, "Implementation,Threads,Trial,Seconds\n");
       }
