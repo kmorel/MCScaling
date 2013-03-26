@@ -28,7 +28,7 @@
 
 #include <dax/cont/DeviceAdapterSerial.h>
 
-//#define LOAD_DATA 1
+#define LOAD_DATA 1
 //#define REMOVE_UNUSED_POINTS 1
 
 class MarchingCubesExampleMPIError : public dax::cont::ErrorControl

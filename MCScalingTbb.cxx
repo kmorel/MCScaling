@@ -28,7 +28,7 @@
 
 #include <tbb/task_scheduler_init.h>
 
-//#define LOAD_DATA 1
+#define LOAD_DATA 1
 //#define REMOVE_UNUSED_POINTS 1
 
 class CopyWorklet : public dax::exec::WorkletMapField
