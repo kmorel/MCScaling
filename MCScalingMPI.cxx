@@ -17,24 +17,24 @@
 #include <dax/cont/ArrayContainerControlBasic.h>
 #include <dax/cont/ArrayHandle.h>
 #include <dax/cont/DeviceAdapter.h>
-#include <dax/cont/GenerateTopology.h>
+#include <dax/cont/GenerateInterpolatedCells.h>
 #include <dax/cont/Scheduler.h>
 #include <dax/cont/Timer.h>
 #include <dax/cont/UniformGrid.h>
 #include <dax/cont/UnstructuredGrid.h>
 
 #include <dax/worklet/Magnitude.h>
-#include <dax/worklet/Threshold.h>
+#include <dax/worklet/MarchingCubes.h>
 
 #include <dax/cont/DeviceAdapterSerial.h>
 
-#define LOAD_DATA 1
+//#define LOAD_DATA 1
 //#define REMOVE_UNUSED_POINTS 1
 
-class ThresholdExampleMPIError : public dax::cont::ErrorControl
+class MarchingCubesExampleMPIError : public dax::cont::ErrorControl
 {
 public:
-  ThresholdExampleMPIError(const char *file,
+  MarchingCubesExampleMPIError(const char *file,
                            dax::Id line,
                            const char *funcall,
                            int errorCode)
@@ -55,11 +55,11 @@ public:
   int __my_result = funcall; \
   if (__my_result != MPI_SUCCESS) \
     { \
-    throw ThresholdExampleMPIError(__FILE__, __LINE__, #funcall, __my_result); \
+    throw MarchingCubesExampleMPIError(__FILE__, __LINE__, #funcall, __my_result); \
     } \
   }
 
-class ThresholdExample
+class MarchingCubesExample
 {
 private:
 
@@ -68,7 +68,7 @@ private:
 
   typedef dax::cont::UniformGrid<DeviceAdapter> UniformGridType;
   typedef dax::cont::UnstructuredGrid<
-      dax::CellTagHexahedron,Container,Container,DeviceAdapter>
+      dax::CellTagTriangle,Container,Container,DeviceAdapter>
       UnstructuredGridType;
 
   typedef dax::cont::ArrayHandle<
@@ -212,55 +212,60 @@ private:
                      data);
   }
 
-  void RunThreshold(const UniformGridType &grid,
-                    const ArrayHandleScalar &inArray,
-                    MPI_Comm comm,
-                    int trial)
+  void RunMarchingCubes(const UniformGridType &grid,
+                        const ArrayHandleScalar &inArray,
+                        MPI_Comm comm,
+                        int trial)
   {
     MPI_Barrier(comm);
     dax::cont::Timer<DeviceAdapter> timer;
     typedef dax::cont::ArrayHandle<
         dax::Id, DAX_DEFAULT_ARRAY_CONTAINER_CONTROL_TAG, DeviceAdapter>
         ClassifyResultType;
-    typedef dax::cont::GenerateTopology<
-        dax::worklet::ThresholdTopology,ClassifyResultType>
+    typedef dax::cont::GenerateInterpolatedCells<
+        dax::worklet::MarchingCubesTopology,ClassifyResultType>
         GenerateTopologyType;
 
     dax::cont::Scheduler<DeviceAdapter> scheduler;
 
     // Run classify algorithm (determine how many cells are passed).
 #ifdef LOAD_DATA
-        const dax::Scalar LOW_SCALAR = 0.07;
-        const dax::Scalar HIGH_SCALAR = 1.0;
+//    const dax::Scalar LOW_SCALAR = 0.07;
+//    const dax::Scalar HIGH_SCALAR = 1.0;
+    const dax::Scalar ISOVALUE = 0.07;
 #else // LOAD_DATA
-        const dax::Scalar LOW_SCALAR = 50.0;
-        const dax::Scalar HIGH_SCALAR = 200.0;
+//    const dax::Scalar LOW_SCALAR = 50.0;
+//    const dax::Scalar HIGH_SCALAR = 200.0;
+    const dax::Scalar ISOVALUE = 250.5;
 #endif // LOAD_DATA
     ClassifyResultType classificationArray;
 //    dax::cont::Timer<DeviceAdapter> classifyTimer;
-    scheduler.Invoke(dax::worklet::ThresholdClassify<dax::Scalar>(
-                       LOW_SCALAR, HIGH_SCALAR),
+    scheduler.Invoke(dax::worklet::MarchingCubesClassify(ISOVALUE),
                      grid,
                      inArray,
                      classificationArray);
 //    dax::Scalar elapsedClassify = classifyTimer.GetElapsedTime();
 
-    // Build thresholded topology.
-    GenerateTopologyType resolveTopology(classificationArray);
+    // Build marching cubes topology.
+    GenerateTopologyType generateTopology(
+          classificationArray,
+          dax::worklet::MarchingCubesTopology(ISOVALUE));
 #ifndef REMOVE_UNUSED_POINTS
-    resolveTopology.SetRemoveDuplicatePoints(false);
+    generateTopology.SetRemoveDuplicatePoints(false);
 #endif
     UnstructuredGridType outGrid;
-    scheduler.Invoke(resolveTopology, grid, outGrid);
+    scheduler.Invoke(generateTopology, grid, outGrid, inArray);
 
 #ifdef REMOVE_UNUSED_POINTS
     // Compact scalar array to new topology.
     ArrayHandleScalar outArray;
     resolveTopology.CompactPointField(inArray, outArray);
+#endif
 
     // Copy grid information to host, if necessary.
     outGrid.GetCellConnections().GetPortalConstControl();
     outGrid.GetPointCoordinates().GetPortalConstControl();
+#ifdef REMOVE_UNUSED_POINTS
     outArray.GetPortalConstControl();
 #endif
 
@@ -311,10 +316,10 @@ private:
 
       if (this->Rank == 0)
         {
-        std::cout << "Computing Threshold, " << numProcesses << " processes..."
+        std::cout << "Computing Contour, " << numProcesses << " processes..."
                   << std::endl;
         }
-      this->RunThreshold(grid, inArray, comm, trial);
+      this->RunMarchingCubes(grid, inArray, comm, trial);
       }
   }
 
@@ -350,7 +355,7 @@ private:
   }
 
 public:
-  ThresholdExample(int argc, char *argv[])
+  MarchingCubesExample(int argc, char *argv[])
   {
     MPI_Init(&argc, &argv);
 
@@ -364,7 +369,7 @@ public:
       fprintf(this->LogFile, "Implementation,Threads,Trial,Seconds\n");
       }
   }
-  ~ThresholdExample()
+  ~MarchingCubesExample()
   {
     if (this->Rank == 0)
       {
@@ -396,12 +401,12 @@ public:
   }
 
 private:
-  ThresholdExample(const ThresholdExample &); // Not implemented.
-  void operator=(const ThresholdExample &); // Not implemented.
+  MarchingCubesExample(const MarchingCubesExample &); // Not implemented.
+  void operator=(const MarchingCubesExample &); // Not implemented.
 };
 
 int main(int argc, char *argv[])
 {
-  return ThresholdExample(argc, argv).Run();
+  return MarchingCubesExample(argc, argv).Run();
 }
 
