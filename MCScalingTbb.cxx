@@ -29,7 +29,7 @@
 #include <tbb/task_scheduler_init.h>
 
 #define LOAD_DATA 1
-//#define REMOVE_UNUSED_POINTS 1
+#define REMOVE_UNUSED_POINTS 1
 
 class CopyWorklet : public dax::exec::WorkletMapField
 {
@@ -182,16 +182,16 @@ public:
         scheduler.Invoke(generateTopology, grid, outGrid, inArray);
 
 #ifdef REMOVE_UNUSED_POINTS
-        // Compact scalar array to new topology.
-        ArrayHandleScalar outArray;
-        resolveTopology.CompactPointField(inArray, outArray);
+        // Compact scalar array to new topology.  TODO: Not supported yet.
+//        ArrayHandleScalar outArray;
+//        generateTopology.CompactPointField(inArray, outArray);
 #endif
 
         // Copy grid information to host, if necessary.
         outGrid.GetCellConnections().GetPortalConstControl();
         outGrid.GetPointCoordinates().GetPortalConstControl();
 #ifdef REMOVE_UNUSED_POINTS
-        outArray.GetPortalConstControl();
+//        outArray.GetPortalConstControl();
 #endif
 
         dax::Scalar time = timer.GetElapsedTime();
