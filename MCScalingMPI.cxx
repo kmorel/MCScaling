@@ -26,10 +26,29 @@
 #include <dax/worklet/Magnitude.h>
 #include <dax/worklet/MarchingCubes.h>
 
+#include <dax/math/VectorAnalysis.h>
+
 #include <dax/cont/DeviceAdapterSerial.h>
 
 #define LOAD_DATA 1
 #define REMOVE_UNUSED_POINTS 1
+#define COMPUTE_NORMALS 1
+
+struct TriangleNormalWorklet : public dax::exec::WorkletMapCell
+{
+  typedef void ControlSignature(Topology, Field(In,Point), Field(Out));
+  typedef void ExecutionSignature(_2, _3);
+
+  DAX_EXEC_EXPORT
+  void operator()(
+      const dax::exec::CellField<dax::Vector3,dax::CellTagTriangle> &pointCoords,
+      dax::Vector3 &normal) const
+  {
+    normal = dax::math::Normal(dax::math::TriangleNormal(pointCoords[0],
+                                                         pointCoords[1],
+                                                         pointCoords[2]));
+  }
+};
 
 class MarchingCubesExampleMPIError : public dax::cont::ErrorControl
 {
@@ -262,11 +281,23 @@ private:
 //    generateTopology.CompactPointField(inArray, outArray);
 #endif
 
+#ifdef COMPUTE_NORMALS
+    // Find normals.
+    ArrayHandleVector normalsArray;
+    scheduler.Invoke(TriangleNormalWorklet(),
+                     outGrid,
+                     outGrid.GetPointCoordinates(),
+                     normalsArray);
+#endif
+
     // Copy grid information to host, if necessary.
     outGrid.GetCellConnections().GetPortalConstControl();
     outGrid.GetPointCoordinates().GetPortalConstControl();
 #ifdef REMOVE_UNUSED_POINTS
 //    outArray.GetPortalConstControl();
+#endif
+#ifdef COMPUTE_NORMALS
+    normalsArray.GetPortalConstControl();
 #endif
 
     dax::Scalar time = timer.GetElapsedTime();
