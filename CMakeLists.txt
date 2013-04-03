@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 2.8)
 
-project(ThresholdScaling CXX)
+project(MCScaling CXX)
 
 set(NUM_TRIALS 5
   CACHE STRING "A number representing how many trials to run per configuration."
